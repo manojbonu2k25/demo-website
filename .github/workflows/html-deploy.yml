@@ -1,5 +1,5 @@
 name: HTML Static Site Deploy with Backup
-
+shell: cmd
 on:
   push:
     branches: [master]
