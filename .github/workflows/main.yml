@@ -1,0 +1,43 @@
+name: Angular Build & Deploy with Backup
+
+on:
+  push:
+    branches: [main]
+
+jobs:
+  build-and-deploy:
+    runs-on: self-hosted
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v3
+
+    - name: Setup Node.js
+      uses: actions/setup-node@v3
+      with:
+        node-version: '18'
+
+    - name: Install dependencies
+      run: npm install
+
+    - name: Build Angular project
+      run: npm run build -- --configuration=production
+
+    - name: Create timestamp for backup
+      run: |
+        powershell -Command "$ts = Get-Date -Format 'yyyyMMdd_HHmmss'; echo TIMESTAMP=$ts >> $env:GITHUB_ENV"
+
+    - name: Create backup of currently deployed version
+      run: |
+        if exist "C:\inetpub\wwwroot\YourApp" (
+          mkdir "C:\Users\manoj\Deployments\backup\backup_%TIMESTAMP%"
+          xcopy "C:\inetpub\wwwroot\YourApp\*" "C:\Users\manoj\Deployments\backup\backup_%TIMESTAMP%\" /s /e /y /i
+        ) else (
+          echo "No existing deployment to back up."
+        )
+
+    - name: Deploy new build
+      run: |
+        rmdir /s /q "C:\inetpub\wwwroot\YourApp"
+        mkdir "C:\inetpub\wwwroot\YourApp"
+        xcopy ".\dist\*" "C:\inetpub\wwwroot\YourApp\" /s /e /y /i
