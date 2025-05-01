@@ -18,15 +18,20 @@ jobs:
         $ts = Get-Date -Format 'yyyyMMdd_HHmmss'
         echo "TIMESTAMP=$ts" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
 
-    - name: Backup current deployed site
-      shell: cmd
-      run: >
-        if exist "C:\inetpub\wwwroot\YourApp" (
-          mkdir "C:\Users\manoj\Deployments\backup\backup_%TIMESTAMP%" &&
-          xcopy "C:\inetpub\wwwroot\YourApp\*" "C:\Users\manoj\Deployments\backup\backup_%TIMESTAMP%\" /s /e /y /i
-        ) else (
-          echo No existing deployment to back up.
-        )
+        - name: Backup current deployed site
+        shell: pwsh
+        run: |
+          $deployPath = "C:\inetpub\wwwroot\YourApp"
+          $backupPath = "C:\Users\manoj\Deployments\backup\backup_$env:TIMESTAMP"
+      
+          if (Test-Path $deployPath) {
+            New-Item -Path $backupPath -ItemType Directory -Force | Out-Null
+            Copy-Item -Path "$deployPath\*" -Destination $backupPath -Recurse
+            Write-Host "Backup completed to $backupPath"
+          } else {
+            Write-Host "No existing deployment to back up."
+          }
+      
 
     - name: Deploy new static files to IIS
       shell: cmd
