@@ -20,9 +20,9 @@ jobs:
 
     - name: Backup current deployed site
       shell: cmd
-      run: |
+      run: >
         if exist "C:\inetpub\wwwroot\YourApp" (
-          mkdir "C:\Users\manoj\Deployments\backup\backup_%TIMESTAMP%"
+          mkdir "C:\Users\manoj\Deployments\backup\backup_%TIMESTAMP%" &&
           xcopy "C:\inetpub\wwwroot\YourApp\*" "C:\Users\manoj\Deployments\backup\backup_%TIMESTAMP%\" /s /e /y /i
         ) else (
           echo No existing deployment to back up.
@@ -30,7 +30,7 @@ jobs:
 
     - name: Deploy new static files to IIS
       shell: cmd
-      run: |
-        rmdir /s /q "C:\inetpub\wwwroot\YourApp"
-        mkdir "C:\inetpub\wwwroot\YourApp"
+      run: >
+        rmdir /s /q "C:\inetpub\wwwroot\YourApp" &&
+        mkdir "C:\inetpub\wwwroot\YourApp" &&
         xcopy ".\*" "C:\inetpub\wwwroot\YourApp\" /s /e /y /i
