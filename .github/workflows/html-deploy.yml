@@ -13,13 +13,13 @@ jobs:
       uses: actions/checkout@v3
 
     - name: Create timestamp for backup
-      shell: pwsh
+      shell: powershell
       run: |
         $ts = Get-Date -Format 'yyyyMMdd_HHmmss'
         echo "TIMESTAMP=$ts" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
 
     - name: Backup current deployed site
-      shell: pwsh
+      shell: powershell
       run: |
         $deployPath = "C:\inetpub\wwwroot\YourApp"
         $backupPath = "C:\Users\manoj\Deployments\backup\backup_$env:TIMESTAMP"
@@ -33,7 +33,7 @@ jobs:
         }
 
     - name: Deploy new static files to IIS
-      shell: pwsh
+      shell: powershell
       run: |
         $deployPath = "C:\inetpub\wwwroot\YourApp"
         if (Test-Path $deployPath) {
