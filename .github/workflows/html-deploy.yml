@@ -1,47 +1,17 @@
-name: Angular Build & Deploy with Backup
+name: Deploy Static Site via SFTP
 
 on:
   push:
     branches:
-      - master
+      - master  # or main, depending on your branch
 
 jobs:
-  build:
+  deploy:
     runs-on: ubuntu-latest
 
     steps:
     - name: Checkout Code
       uses: actions/checkout@v3
-
-    - name: Setup Node.js
-      uses: actions/setup-node@v3
-      with:
-        node-version: '18'
-
-    - name: Install Dependencies
-      run: npm install
-
-    - name: Build Angular App
-      run: npm run build -- --configuration production
-
-    - name: Upload Build Artifact
-      uses: actions/upload-artifact@v4
-      with:
-        name: dist-folder
-        path: dist/
-
-  deploy:
-    runs-on: ubuntu-latest
-    needs: build
-    environment:
-      name: production   # Requires manual approval if you set it in GitHub
-
-    steps:
-    - name: Download Build Artifact
-      uses: actions/download-artifact@v4
-      with:
-        name: dist-folder
-        path: dist/
 
     - name: Backup Existing Server Files
       uses: appleboy/ssh-action@v1.0.0
@@ -52,15 +22,14 @@ jobs:
         script: |
           TIMESTAMP=$(date +%Y%m%d_%H%M%S)
           BACKUP_DIR="/var/www/html_backup_$TIMESTAMP"
-          echo "Backing up existing site to $BACKUP_DIR"
+          echo "Backing up current site to $BACKUP_DIR"
           cp -r /var/www/html "$BACKUP_DIR"
 
-    - name: Deploy New Build via SFTP
+    - name: Deploy Files via SFTP
       uses: appleboy/scp-action@v0.1.6
       with:
         host: ${{ secrets.SFTP_HOST }}
         username: ${{ secrets.SFTP_USERNAME }}
         password: ${{ secrets.SFTP_PASSWORD }}
-        source: "dist/**"
+        source: "*"
         target: "/var/www/html"
-
