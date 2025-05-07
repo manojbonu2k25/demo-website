@@ -1,41 +1,66 @@
-name: HTML Static Site Deploy with Backup
+name: Angular Build & Deploy with Backup
 
 on:
   push:
-    branches: [master]
+    branches:
+      - main
 
 jobs:
-  deploy-static-site:
-    runs-on: self-hosted
+  build:
+    runs-on: ubuntu-latest
 
     steps:
-    - name: Checkout code
+    - name: Checkout Code
       uses: actions/checkout@v3
 
-    - name: Create timestamp for backup
-      shell: powershell
-      run: |
-        $ts = Get-Date -Format 'yyyyMMdd_HHmmss'
-        echo "TIMESTAMP=$ts" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
+    - name: Setup Node.js
+      uses: actions/setup-node@v3
+      with:
+        node-version: '18'
 
-    - name: Backup previous commit files before deploy
-      shell: powershell
-      run: |
-          $ts = Get-Date -Format 'yyyyMMdd_HHmmss'
-          $backupPath = "C:\Users\manoj\Deployments\repo-backup_$ts"
-          git checkout HEAD~1
-          New-Item -Path $backupPath -ItemType Directory -Force | Out-Null
-          Copy-Item -Path ".\*" -Destination $backupPath -Recurse -Force
-          git checkout -
-          Write-Host "Previous commit files backed up to $backupPath"
-      
-    - name: Deploy new static files to IIS
-      shell: powershell
-      run: |
-        $deployPath = "C:\inetpub\wwwroot\YourApp"
-        if (Test-Path $deployPath) {
-          Remove-Item -Path $deployPath -Recurse -Force
-        }
-        New-Item -Path $deployPath -ItemType Directory -Force | Out-Null
-        Copy-Item -Path ".\*" -Destination $deployPath -Recurse -Force
-        Write-Host "Deployment completed to $deployPath"
+    - name: Install Dependencies
+      run: npm install
+
+    - name: Build Angular App
+      run: npm run build -- --configuration production
+
+    - name: Upload Build Artifact
+      uses: actions/upload-artifact@v4
+      with:
+        name: dist-folder
+        path: dist/
+
+  deploy:
+    runs-on: ubuntu-latest
+    needs: build
+    environment:
+      name: production   # Requires manual approval if you set it in GitHub
+
+    steps:
+    - name: Download Build Artifact
+      uses: actions/download-artifact@v4
+      with:
+        name: dist-folder
+        path: dist/
+
+    - name: Backup Existing Server Files
+      uses: appleboy/ssh-action@v1.0.0
+      with:
+        host: ${{ secrets.SFTP_HOST }}
+        username: ${{ secrets.SFTP_USERNAME }}
+        password: ${{ secrets.SFTP_PASSWORD }}
+        script: |
+          TIMESTAMP=$(date +%Y%m%d_%H%M%S)
+          BACKUP_DIR="/var/www/html_backup_$TIMESTAMP"
+          echo "Backing up existing site to $BACKUP_DIR"
+          cp -r /var/www/html "$BACKUP_DIR"
+
+    - name: Deploy New Build via SFTP
+      uses: appleboy/scp-action@v0.1.6
+      with:
+        host: ${{ secrets.SFTP_HOST }}
+        username: ${{ secrets.SFTP_USERNAME }}
+        password: ${{ secrets.SFTP_PASSWORD }}
+        source: "dist/**"
+        target: "/var/www/html"
+
